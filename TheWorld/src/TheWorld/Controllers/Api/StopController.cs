@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.AspNet.Authorization;
 using Microsoft.AspNet.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
@@ -13,6 +14,7 @@ using TheWorld.ViewModels;
 
 namespace TheWorld.Controllers.Api
 {
+    [Authorize]
     [Route("api/trips/{tripName}/stops")]
     public class StopController : Controller
     {
@@ -32,7 +34,7 @@ namespace TheWorld.Controllers.Api
         {
             try
             {
-                var results = _repository.GetTripByName(tripName);
+                var results = _repository.GetTripByName(tripName, User.Identity.Name);
                 if(results == null)
                 {
                     return Json(null);
@@ -68,7 +70,7 @@ namespace TheWorld.Controllers.Api
                     newStop.Longitude = coordResult.Longitude;
                     newStop.Latitude = coordResult.Latitude;
                     //Save to the database
-                    _repository.AddStop(newStop, tripName);
+                    _repository.AddStop(newStop, User.Identity.Name, tripName);
 
                     if (_repository.SaveAll())
                     {

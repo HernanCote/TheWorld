@@ -18,28 +18,9 @@ namespace TheWorld.Models
             _userManager = userManager;
         }
 
-        public async Task EnsureSeedData()
+        public void EnsureSeedData()
         {
-            if(await _userManager.FindByEmailAsync("sam.hasting@theworld.com") == null)
-            {
-                //add the user
-                var newUser = new WorldUser()
-                {
-                    UserName = "samhastings",
-                    Email = "sam.hasting@theworld.com"
-                };
-
-                var newUser2 = new WorldUser()
-                {
-                    UserName = "hernan",
-                    Email = "hernan@theworld.com"
-                };
-
-                await _userManager.CreateAsync(newUser, "Melapela3");
-                await _userManager.CreateAsync(newUser2, "melapela3");
-            }
-
-            if(!_context.Trips.Any())
+            if (!_context.Trips.Any())
             {
                 var usTrip = new Trip()
                 {

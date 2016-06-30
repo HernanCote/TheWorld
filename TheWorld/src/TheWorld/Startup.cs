@@ -16,6 +16,8 @@ using AutoMapper;
 using TheWorld.ViewModels;
 using Microsoft.AspNet.Identity.EntityFramework;
 using Microsoft.AspNet.Mvc;
+using Microsoft.AspNet.Authentication.Cookies;
+using System.Net;
 
 namespace TheWorld
 {
@@ -35,14 +37,6 @@ namespace TheWorld
         // For more information on how to configure your application, visit http://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddIdentity<WorldUser, IdentityRole>(config =>
-            {
-                config.User.RequireUniqueEmail = true;
-                config.Password.RequiredLength = 6;
-                config.Cookies.ApplicationCookie.LoginPath = "/Auth/Login";
-            }).AddEntityFrameworkStores<WorldContext>();
-
-
             services.AddMvc(config =>
             {
 #if !DEBUG
@@ -56,6 +50,28 @@ namespace TheWorld
                 opt.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
             });
 
+            services.AddIdentity<WorldUser, IdentityRole>(config =>
+            {
+                config.User.RequireUniqueEmail = true;
+                config.Password.RequiredLength = 6;
+                config.Cookies.ApplicationCookie.LoginPath = "/Auth/Login";
+                config.Cookies.ApplicationCookie.Events = new CookieAuthenticationEvents()
+                {
+                    OnRedirectToLogin = ctx =>
+                    {
+                        if (ctx.Request.Path.StartsWithSegments("/api") &&
+                            ctx.Response.StatusCode == (int)HttpStatusCode.OK)
+                        {
+                            ctx.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                        }
+                        else
+                        {
+                            ctx.Response.Redirect(ctx.RedirectUri);
+                        }
+                        return Task.FromResult(0);
+                    }
+                };
+            }).AddEntityFrameworkStores<WorldContext>();
 
             services.AddLogging();
             services.AddEntityFramework().AddSqlServer().AddDbContext<WorldContext>();
@@ -72,9 +88,15 @@ namespace TheWorld
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public async void Configure(IApplicationBuilder app, TheWorldContextSeedData seeder, ILoggerFactory loggerFactory)
+        public void Configure(IApplicationBuilder app, TheWorldContextSeedData seeder, ILoggerFactory loggerFactory,
+            IHostingEnvironment env)
         {
             loggerFactory.AddDebug(LogLevel.Warning);
+
+            if(env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
 
             app.UseStaticFiles();
 
@@ -95,7 +117,7 @@ namespace TheWorld
                         );
             });
 
-            await seeder.EnsureSeedData();
+            seeder.EnsureSeedData();
         }
 
         // Entry point for the application.
